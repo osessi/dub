@@ -4,30 +4,32 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 COPY . .
 
-# Installer pnpm
+# Installer PNPM
 RUN npm install -g pnpm
 
-# Installer toutes les dépendances du monorepo
+# Installer toutes les dépendances du monorepo (pas seulement apps/web)
 RUN pnpm install --no-frozen-lockfile
 
-# Générer les fichiers Prisma (Dub les utilise)
+# Générer Prisma (important pour Dub)
 RUN pnpm --filter=@dub/prisma generate || true
 
-# Construire le frontend Next.js
-RUN cd apps/web && pnpm run build
+# Construire le front Next.js
+WORKDIR /app/apps/web
+RUN pnpm run build
 
 # ----------- RUNNER -----------
-FROM node:18-alpine
+FROM node:18-alpine AS runner
+
 WORKDIR /app
 
-# Copier seulement le build nécessaire
+# Copier le build depuis l'image builder
 COPY --from=builder /app/apps/web ./
 
-# Installer pnpm à nouveau
+# Installer PNPM dans l'image finale
 RUN npm install -g pnpm
 
-# Exposer le port 3000
+# Exposer le port de Next.js
 EXPOSE 3000
 
-# Lancer le serveur Next.js
+# Lancer l'app
 CMD ["pnpm", "start"]
