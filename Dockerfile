@@ -1,23 +1,26 @@
-# ---- Base image ----
-FROM node:18-alpine
-
-# ---- Create app directory ----
+# Utilise une image Node légère
+FROM node:18-alpine AS builder
 WORKDIR /app
 
-# ---- Copy package files ----
-COPY package*.json ./
-
-# ---- Install dependencies ----
-RUN npm install --omit=dev --workspaces
-
-# ---- Copy the rest of the app ----
+# Copie tout le projet
 COPY . .
 
-# ---- Build if needed (for Next.js) ----
-RUN npm run build || true
+# Va dans le bon dossier (Dub utilise apps/web comme dossier principal)
+WORKDIR /app/apps/web
 
-# ---- Expose port ----
+# Installe les dépendances et build
+RUN npm install -g pnpm
+RUN pnpm install --prod --filter ./apps/web
+RUN pnpm run build
+
+# ---- Runner stage ----
+FROM node:18-alpine
+WORKDIR /app
+
+# Copie juste le build depuis le builder
+COPY --from=builder /app/apps/web ./
+
+# Expose le port (Dub utilise 3000)
 EXPOSE 3000
 
-# ---- Start the app ----
-CMD ["npm", "start"]
+CMD ["pnpm", "start"]
