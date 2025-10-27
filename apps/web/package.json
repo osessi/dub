@@ -3,17 +3,17 @@
   "private": true,
   "license": "AGPL-3.0-or-later",
   "scripts": {
-    "dev": "concurrently --kill-others \"pnpm prisma:generate && next dev --turbopack --port 8888\" \"pnpm prisma:generate && pnpm prisma:studio --browser none\"",
-    "build": "pnpm prisma:generate && next build",
-    "lint": "next lint",
-    "start": "next start",
-    "script": "tsx ./scripts/run.ts",
-    "test": "pnpm prisma:generate && vitest -no-file-parallelism --bail=1",
-    "generate-openapi": "tsx ./scripts/generate-openapi.ts",
-    "prisma:generate": "dotenv-flow -e .env -- pnpm --filter=@dub/prisma generate",
-    "prisma:push": "dotenv-flow -e .env -- pnpm --filter=@dub/prisma push",
-    "prisma:studio": "dotenv-flow -e .env -- pnpm --filter=@dub/prisma studio",
-    "prisma:format": "dotenv-flow -e .env -- pnpm --filter=@dub/prisma format"
+    "dev": "concurrently --kill-others \"bunx prisma generate && bunx next dev --turbopack --port 8888\" \"bunx prisma generate && bunx prisma studio --browser none\"",
+    "build": "bunx prisma generate && bunx next build",
+    "lint": "bunx next lint",
+    "start": "bunx next start",
+    "script": "bunx tsx ./scripts/run.ts",
+    "test": "bunx prisma generate && bunx vitest --no-file-parallelism --bail=1",
+    "generate-openapi": "bunx tsx ./scripts/generate-openapi.ts",
+    "prisma:generate": "bunx dotenv-flow -e .env -- bunx prisma generate",
+    "prisma:push": "bunx dotenv-flow -e .env -- bunx prisma db push",
+    "prisma:studio": "bunx dotenv-flow -e .env -- bunx prisma studio",
+    "prisma:format": "bunx dotenv-flow -e .env -- bunx prisma format"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.0.7",
@@ -153,11 +153,5 @@
   },
   "browser": {
     "crypto": false
-  },
-  "pnpm": {
-    "overrides": {
-      "@types/react": "19.1.14",
-      "@types/react-dom": "19.1.9"
-    }
   }
 }
