@@ -11,7 +11,7 @@ RUN bun install
 WORKDIR /app/apps/web
 
 # Générer Prisma + construire Next.js
-RUN bunx prisma generate && bunx next build
+RUN bunx prisma generate --schema=../../packages/prisma/schema/schema.prisma && bunx next build
 
 # Étape 2 : Image finale plus légère
 FROM oven/bun:1.1.21 AS runner
