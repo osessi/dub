@@ -8,8 +8,11 @@ COPY . .
 RUN curl -fsSL https://bun.sh/install | bash
 ENV PATH="/root/.bun/bin:$PATH"
 
-# Installer les dépendances du monorepo
+# Installer toutes les dépendances du monorepo
 RUN bun install
+
+# ✅ Installer Prisma (et @prisma/client) pour éviter l’auto-installation
+RUN npm install prisma @prisma/client --save-dev
 
 # Aller dans l'app principale
 WORKDIR /app/apps/web
@@ -21,14 +24,14 @@ RUN echo "=== Fusion du schéma Prisma ===" && \
     grep -v '^import' /tmp/prisma/schema_raw.prisma > /tmp/prisma/schema.prisma && \
     echo "=== Schéma nettoyé ==="
 
-# ✅ Utiliser npx (Node) pour Prisma, pas bunx
-RUN cd /app && npx prisma generate --schema=/tmp/prisma/schema.prisma && \
+# ✅ Générer le client Prisma sans auto-install
+RUN npx prisma generate --schema=/tmp/prisma/schema.prisma && \
     echo "=== Prisma Client généré avec succès ==="
 
-# Construire Next.js avec Bun
+# Build Next.js avec Bun (plus rapide)
 RUN bunx next build
 
-# Étape 2 : Runner léger
+# Étape 2 : Image finale légère
 FROM node:20-slim AS runner
 
 WORKDIR /app
