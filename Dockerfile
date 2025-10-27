@@ -1,23 +1,33 @@
-FROM node:18-alpine AS builder
+# Étape 1 : utiliser Bun (plus rapide et plus stable que PNPM)
+FROM oven/bun:1.1.21 AS builder
+
+# Définir le répertoire de travail
 WORKDIR /app
 
-# Copier les fichiers essentiels pour installer
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-COPY packages ./packages
-COPY apps ./apps
+# Copier tous les fichiers du projet
+COPY . .
 
-RUN npm install -g pnpm
-RUN pnpm install --no-frozen-lockfile
+# Installer les dépendances
+RUN bun install
 
-# Générer Prisma ou autre lib build
-RUN pnpm --filter=@dub/prisma generate || true
+# Construire toutes les apps/packages via Turbo
+RUN bun run build
 
-WORKDIR /app/apps/web
-RUN pnpm run build
-
-FROM node:18-alpine AS runner
+# Étape 2 : image finale plus légère
+FROM oven/bun:1.1.21 AS runner
 WORKDIR /app
-COPY --from=builder /app/apps/web ./
+
+# Copier uniquement le nécessaire depuis l'étape précédente
+COPY --from=builder /app .
+
+# Définir la variable d'environnement
 ENV NODE_ENV=production
+
+# Exposer le port par défaut (Next.js écoute sur 3000)
 EXPOSE 3000
-CMD ["pnpm", "start"]
+
+# Aller dans l'app principale (apps/web)
+WORKDIR /app/apps/web
+
+# Lancer l'application en production
+CMD ["bun", "run", "start"]
