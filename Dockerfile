@@ -1,4 +1,4 @@
-# Étape 1 : Build avec Node + Bun
+# Étape 1 : Builder
 FROM node:20 AS builder
 WORKDIR /app
 
@@ -6,36 +6,47 @@ WORKDIR /app
 RUN curl -fsSL https://bun.sh/install | bash
 ENV PATH="/root/.bun/bin:$PATH"
 
-# Copier les fichiers
+# Copier tout le monorepo
 COPY . .
 
-# Installer les dépendances avec Bun (qui gère mieux le monorepo)
+# Créer un package.json minimal à la racine si nécessaire
+RUN if [ ! -f /app/package.json ]; then \
+    echo '{"name":"dub-monorepo","private":true,"workspaces":["apps/*","packages/*"]}' > /app/package.json; \
+    fi
+
+# Installer les dépendances du monorepo
 RUN bun install
 
-# Aller dans l'app web
-WORKDIR /app/apps/web
+# Installer Prisma globalement pour éviter l'auto-install
+RUN bun add -d prisma@6.18.0 @prisma/client@6.18.0
 
-# Fusionner les schémas Prisma (sans les imports)
+# Fusionner les schémas Prisma
 RUN mkdir -p /tmp/prisma && \
-    cat ../../packages/prisma/schema/*.prisma | grep -v '^import' > /tmp/prisma/schema.prisma
+    cat /app/packages/prisma/schema/*.prisma | grep -v '^import' > /tmp/prisma/schema.prisma
 
-# Générer le client Prisma
-RUN bun x prisma generate --schema=/tmp/prisma/schema.prisma
+# Générer le client Prisma avec le bon contexte
+RUN cd /app && bunx prisma generate --schema=/tmp/prisma/schema.prisma
 
-# Build Next.js
+# Builder Next.js
+WORKDIR /app/apps/web
 RUN bun run build
 
-# Étape 2 : Image finale
+# Étape 2 : Runner
 FROM node:20-slim AS runner
 WORKDIR /app
 
-# Copier les fichiers nécessaires
+# Installer Bun dans le runner
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:$PATH"
+
+# Copier les fichiers buildés
 COPY --from=builder /app/apps/web/.next ./apps/web/.next
 COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
 
 WORKDIR /app/apps/web
 EXPOSE 3000
 
-CMD ["node_modules/.bin/next", "start"]
+CMD ["bun", "run", "start"]
